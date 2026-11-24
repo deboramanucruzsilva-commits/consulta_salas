@@ -1,0 +1,36 @@
+services:
+  db:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-salasfac}
+      MYSQL_USER: ${MYSQL_USER:-salasfac}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-salasfac_dev}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_dev_only}
+    ports:
+      - "127.0.0.1:3307:3306"
+    volumes:
+      - salasfac_mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$${MYSQL_ROOT_PASSWORD}\" --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  web:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: mysql://${MYSQL_USER:-salasfac}:${MYSQL_PASSWORD:-salasfac_dev}@db:3306/${MYSQL_DATABASE:-salasfac}
+      DATABASE_SSL: "false"
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:3000:3000"
+
+volumes:
+  salasfac_mysql:
